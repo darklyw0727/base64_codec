@@ -1,6 +1,6 @@
 CC = gcc
 TARGET = demo
-SOURCE = demo.c b64_crypt.c
+SOURCE = demo.c b64_codec.c
 OBJECT = $(SOURCE:.c=.o)
 
 $(TARGET): $(OBJECT) 

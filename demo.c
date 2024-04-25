@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include "b64_crypt.h"
+#include "b64_codec.h"
 
 int main(int argc, char **argv)
 {
