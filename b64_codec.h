@@ -34,14 +34,12 @@ b64_t *b64url_encode(const unsigned char *in, size_t len);
 /**
  * Make base64 string to normal (origin) string
  * @param in <in> input string in base64 format
- * @param len <in> input length
  * @returns NULL (error) or the b64_t include output string and length
 */
 b64_t *b64_decode(const char *in);
 /**
  * Make base64url char string to normal (origin) string
  * @param in <in> input string in base64 format
- * @param len <in> input length
  * @returns NULL (error) or the b64_t include output string and length
 */
 b64_t *b64url_decode(const char *in);
