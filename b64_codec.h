@@ -9,34 +9,48 @@
 #define B64_DEBUG(args...)
 #endif
 
+/**
+ * Calculate the data length after encode
+ * @param inlen <in> your input length
+ * @return the data length after encode
+*/
 size_t b64_encoded_size(size_t inlen);
+/**
+ * Calculate the data length after decode
+ * @param in <in> your input string
+ * @return the data length after decode
+*/
 size_t b64_decoded_size(const char *in);
 
 /**
  * Make input string to base64 format
  * @param in <in> input string
  * @param len <in> input length
- * @returns NULL (error) or b64_t that include output string and length
+ * @param out <out> output string
+ * @returns 0 (error) or the data length after base64 encode
 */
 size_t b64_encode(const unsigned char *in, size_t len, char *out);
 /**
  * Make input string to base64url format
  * @param in <in> input string
  * @param len <in> input length
- * @returns NULL (error) or the b64_t include output string and length
+ * @param out <out> output string
+ * @returns 0 (error) or the data length after base64URL encode
 */
 size_t b64url_encode(const unsigned char *in, size_t len, char *out);
 
 /**
  * Make base64 string to normal (origin) string
  * @param in <in> input string in base64 format
- * @returns NULL (error) or the b64_t include output string and length
+ * @param out <out> output string
+ * @returns 0 (error) or the data length after base64 decode
 */
 size_t b64_decode(const char *in, unsigned char *out);
 /**
  * Make base64url char string to normal (origin) string
  * @param in <in> input string in base64 format
- * @returns NULL (error) or the b64_t include output string and length
+ * @param out <out> output string
+ * @returns 0 (error) or the data length after base64URL decode
 */
 size_t b64url_decode(const char *in, unsigned char *out);
 #endif
