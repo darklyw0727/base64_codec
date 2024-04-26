@@ -9,12 +9,8 @@
 #define B64_DEBUG(args...)
 #endif
 
-typedef struct b64{
-    unsigned char *data;
-    size_t data_len;
-} b64_t;
-
-void b64_free(b64_t *ptr);
+size_t b64_encoded_size(size_t inlen);
+size_t b64_decoded_size(const char *in);
 
 /**
  * Make input string to base64 format
@@ -22,25 +18,25 @@ void b64_free(b64_t *ptr);
  * @param len <in> input length
  * @returns NULL (error) or b64_t that include output string and length
 */
-b64_t *b64_encode(const unsigned char *in, size_t len);
+size_t b64_encode(const unsigned char *in, size_t len, char *out);
 /**
  * Make input string to base64url format
  * @param in <in> input string
  * @param len <in> input length
  * @returns NULL (error) or the b64_t include output string and length
 */
-b64_t *b64url_encode(const unsigned char *in, size_t len);
+size_t b64url_encode(const unsigned char *in, size_t len, char *out);
 
 /**
  * Make base64 string to normal (origin) string
  * @param in <in> input string in base64 format
  * @returns NULL (error) or the b64_t include output string and length
 */
-b64_t *b64_decode(const char *in);
+size_t b64_decode(const char *in, unsigned char *out);
 /**
  * Make base64url char string to normal (origin) string
  * @param in <in> input string in base64 format
  * @returns NULL (error) or the b64_t include output string and length
 */
-b64_t *b64url_decode(const char *in);
+size_t b64url_decode(const char *in, unsigned char *out);
 #endif

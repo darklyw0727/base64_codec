@@ -3,11 +3,6 @@
 #include <stdlib.h>
 #include "b64_codec.h"
 
-void b64_free(b64_t *ptr){
-	if(ptr->data) free(ptr->data);
-	free(ptr);
-}
-
 static void replace_char(char *in, int ori_char, char *rep_char){
 	char *ptr;
 	char *buf = malloc(strlen(in)+1);
@@ -34,7 +29,7 @@ static void replace_char(char *in, int ori_char, char *rep_char){
 	free(buf);
 }
 
-static size_t b64_encoded_size(size_t inlen)
+size_t b64_encoded_size(size_t inlen)
 {
 	size_t ret;
 
@@ -50,102 +45,99 @@ static size_t b64_encoded_size(size_t inlen)
 //base64 char table
 static const char b64chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-b64_t *b64_encode(const unsigned char *in, size_t len)
+size_t b64_encode(const unsigned char *in, size_t len, char *out)
 {
     B64_DEBUG("---B64 encode---\n");
-	b64_t *ret;
+	size_t ret = 0;
 	size_t  elen;
-	size_t  i;
-	size_t  j;
 	size_t  v;
-
-	//Check input
-	if (in == NULL || len == 0)
-		return NULL;
+	char *buf;
+	size_t buf_len;
 
 	//Calculate the length after encode
 	elen = b64_encoded_size(len);
 
-	ret = malloc(sizeof(b64_t));
-	if(!ret){
+	if((buf = malloc(elen+1)) == NULL){
 		B64_DEBUG("Malloc failed\n");
-		return NULL;
+		return ret;
 	}
-	memset(ret, 0, sizeof(b64_t));
-	ret->data = malloc(elen+1);
-	if(!ret->data){
-		B64_DEBUG("Malloc failed\n");
-		b64_free(ret);
-		return NULL;
-	}
-	memset(ret->data, 0, elen+1);
 
 	//Encode
-	for (i=0, j=0; i<len; i+=3, j+=4) {
+	for (int  i=0, j=0; i<len; i+=3, j+=4) {
 		v = in[i];
 		v = i+1 < len ? v << 8 | in[i+1] : v << 8;
 		v = i+2 < len ? v << 8 | in[i+2] : v << 8;
 
-		ret->data[j] = b64chars[(v >> 18) & 0x3F];
-		ret->data[j+1] = b64chars[(v >> 12) & 0x3F];
+		buf[j] = b64chars[(v >> 18) & 0x3F];
+		buf[j+1] = b64chars[(v >> 12) & 0x3F];
 		if (i+1 < len) {
-			ret->data[j+2] = b64chars[(v >> 6) & 0x3F];
+			buf[j+2] = b64chars[(v >> 6) & 0x3F];
 		} else {
-			ret->data[j+2] = '=';
+			buf[j+2] = '=';
 		}
 		if (i+2 < len) {
-			ret->data[j+3] = b64chars[v & 0x3F];
+			buf[j+3] = b64chars[v & 0x3F];
 		} else {
-			ret->data[j+3] = '=';
+			buf[j+3] = '=';
 		}
 	}
-	ret->data[elen] = '\0';
-	ret->data_len = strlen(ret->data);
-	B64_DEBUG("B64 encode data (length = %ld):\n%s\n", ret->data_len, ret->data);
-	B64_DEBUG("---B64 encode finish---\n");
+	buf[elen] = '\0';
+	strcpy(out, buf);
+	B64_DEBUG("B64 encode data buffer (length = %ld):\n%s\n", strlen(buf), buf);
 
+	free(buf);
+	ret = elen;
+	B64_DEBUG("---B64 encode finish---\n");
 	return ret;
 }
 
-b64_t *b64url_encode(const unsigned char *in, size_t len)
+size_t b64url_encode(const unsigned char *in, size_t len, char *out)
 {
-	b64_t *ret;
-    b64_t *b64;
-	unsigned char *ptr;
-	char *buf;
+	size_t ret = 0;
+	char *ptr;
+	size_t b64_len;
+	// char *buf;
+	// size_t buf_len;
 
 	//Base64 encode
-	ret = b64_encode(in, len);
-	B64_DEBUG("b64url encode step1: %s\n", ret->data);
+	b64_len = b64_encoded_size(len);
+	char b64[b64_len+1];
+
+	if((b64_len = b64_encode(in, len, b64)) == 0){
+		B64_DEBUG("b64_encode failed\n");
+		return ret;
+	}
+	B64_DEBUG("b64url encode step1: %s\n", b64);
 
 	//Delete "="
-	if((ptr = strchr(ret->data, '=')) != NULL){
-	    B64_DEBUG("find =\n");
-		buf = malloc(ptr-(ret->data)+1);
-		if(buf == NULL){
-			B64_DEBUG("Malloc failed\n");
-			b64_free(ret);
-			return NULL;
-		}
-		memset(buf, 0, ptr-(ret->data)+1);
+	if((ptr = strchr(b64, '=')) != NULL){
+	    B64_DEBUG("find \"=\"\n");
+		b64_len = ptr-b64;
+		b64[b64_len] = '\0';
+		// buf_len = ptr-b64;
+		// buf = malloc(buf_len+1);
+		// if(buf == NULL){
+		// 	B64_DEBUG("Malloc failed\n");
+		// 	return ret;
+		// }
+		// memset(buf, 0, buf_len+1);
 
-		strncpy(buf, ret->data, ptr-(ret->data));
-		buf[ptr-(ret->data)] = '\0';
-		
-		free(ret->data);
-		ret->data = buf;
-		ret->data_len = strlen(ret->data);
+		// strncpy(buf, b64, buf_len);
+		// buf[buf_len] = '\0';
 	}
-	B64_DEBUG("b64url encode step2: %s\n", ret->data);
+	B64_DEBUG("b64url encode step2: %s\n", b64);
 
 	//Turn to base64url fomat
-	replace_char(ret->data, '+', "-");
-	replace_char(ret->data, '/', "_");
+	replace_char(b64, '+', "-");
+	replace_char(b64, '/', "_");
 
+	strcpy(out, b64);
+	//free(buf);
+	ret = b64_len;
 	return ret;
 }
 
-static size_t b64_decoded_size(const char *in)
+size_t b64_decoded_size(const char *in)
 {
 	size_t len;
 	size_t ret;
@@ -206,68 +198,66 @@ static int b64url_checkchar(char c)
 	return 0;
 }
 
-b64_t *b64_decode(const char *in)
+size_t b64_decode(const char *in, unsigned char *out)
 {
     B64_DEBUG("---B64 decode---\n");
-	b64_t *ret;
-	size_t i;
-	size_t j;
+	size_t ret = 0;
 	int    v;
 	size_t len = strlen(in);
+	char *buf;
+	size_t buf_len;
 
 	//Check input length
-	if(in == NULL) return NULL;
-	if(len % 4 != 0) return NULL;
+	if(len % 4 != 0) return ret;
 
 	//Check input fomat
-	for (i=0; i<len; i++) {
+	for (int i=0; i<len; i++) {
 		if (!b64_checkchar(in[i])) {
-			return NULL;
+			B64_DEBUG("b64_checkchar failed (char %d)\n", i);
+			return ret;
 		}
 	}
-
-	ret = malloc(sizeof(b64_t));
-	if(ret == NULL){
-		B64_DEBUG("Malloc failed\n");
-		return NULL;
-	}
-	memset(ret, 0, sizeof(b64_t));
 	
 	//Calculate the length after decode
-	ret->data_len = b64_decoded_size(in);
-	ret->data = malloc(ret->data_len+1);
-	if(ret->data == NULL){
+	buf_len = b64_decoded_size(in);
+	buf = malloc(buf_len+1);
+	if(buf == NULL){
 		B64_DEBUG("Malloc failed\n");
-		b64_free(ret);
-		return NULL;
+		return ret;
 	}
-	memset(ret->data, 0, ret->data_len+1);
+	memset(buf, 0, buf_len+1);
+	B64_DEBUG("Malloc %ld bytes buffer\n", buf_len+1);
 
 	//Decode
-	for (i=0, j=0; i<len; i+=4, j+=3) {
+	for (size_t i=0, j=0; i<len; i+=4, j+=3) {
 		v = b64invs[in[i]-43];
 		v = (v << 6) | b64invs[in[i+1]-43];
 		v = in[i+2]=='=' ? v << 6 : (v << 6) | b64invs[in[i+2]-43];
 		v = in[i+3]=='=' ? v << 6 : (v << 6) | b64invs[in[i+3]-43];
 
-		ret->data[j] = (v >> 16) & 0xFF;
+		buf[j] = (v >> 16) & 0xFF;
 		if (in[i+2] != '=')
-			ret->data[j+1] = (v >> 8) & 0xFF;
+			buf[j+1] = (v >> 8) & 0xFF;
 		if (in[i+3] != '=')
-			ret->data[j+2] = v & 0xFF;
+			buf[j+2] = v & 0xFF;
 	}
 
-	ret->data[ret->data_len] = '\0';
-
+	buf[buf_len] = '\0';
+	B64_DEBUG("Buffer after decode : \n%s\n", buf);
+	memcpy(out, buf, buf_len+1);
+	free(buf);
+	ret = buf_len;
 	return ret;
 }
 
-b64_t *b64url_decode(const char *in)
+size_t b64url_decode(const char *in, unsigned char *out)
 {
-	b64_t *ret;
+	B64_DEBUG("---B64URL DECODE---\n");
+	size_t ret = 0;
 	size_t len;
 	char *buf;
 	size_t buf_len;
+	size_t out_len;
 
 	len = strlen(in);
 
@@ -275,7 +265,7 @@ b64_t *b64url_decode(const char *in)
 	for(int a = 0; a < len; a++){
 		if(b64url_checkchar(in[a]) <= 0){
 			B64_DEBUG("b64url_checkchar() failed\n");
-			return NULL;
+			return ret;
 		}
 	}
 
@@ -293,8 +283,12 @@ b64_t *b64url_decode(const char *in)
 	else if((buf_len %4) == 3) strcat(buf, "=");
 
 	//Base64 decode
-	ret = b64_decode(buf);
+	if((ret = b64_decode(buf, out)) == 0){
+		B64_DEBUG("b64_decode failed\n");
+		return ret;
+	}
 	
 	free(buf);
+	B64_DEBUG("---B64URL DECODE END---\n");
 	return ret;
 }
