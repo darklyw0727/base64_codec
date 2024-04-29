@@ -3,42 +3,74 @@
 #include <stdlib.h>
 #include "b64_codec.h"
 
-static void replace_char(char *in, int ori_char, char *rep_char){
+static void replace_char(char *in, int ori_char, int rep_char){
 	char *ptr;
-	char *buf = malloc(strlen(in)+1);
 
-	while((ptr = strchr(in, ori_char)) != NULL){ //Find the char you want to replace
-		B64_DEBUG("Origin string is : %s\n", in);
-		B64_DEBUG("find target\n");
-		memset(buf, 0, sizeof(buf));
-
-		strncpy(buf, in, ptr - in); //Copy the chars befor target char to buffer
-		buf[ptr - in] = '\0';
-		B64_DEBUG("buf = %s\n", buf);
-
-		strcat(buf, rep_char); //Cat the char you need buffer
-		B64_DEBUG("buf = %s\n", buf);
-		strcat(buf, ptr+1); //Skip the target char you find and copy rest chars to buffer
-		B64_DEBUG("buf = %s\n", buf);
-
-		strcpy(in, buf);//Replace input by buffer
-		//B64_DEBUG("buf = %s\n", buf);
-		B64_DEBUG("String after repalce is : %s\n", in);
+	while((ptr = strchr(in, ori_char)) != NULL){
+		B64_DEBUG("Find Target, start repalce\n");
+		in[ptr-in] = rep_char;
+		B64_DEBUG("After repalce : \n%s\n", in);
 	}
+}
+
+size_t b64_turn(const int url, const char *in, char *out){
+	B64_DEBUG("--- b64_turn ---\n");
+	size_t ret = 0;
+	char *buf;
+	size_t buf_len;
+	size_t buf_size = strlen(in)+1;
+
+	if((buf = malloc(buf_size)) == NULL){
+		B64_DEBUG("Malloc failed\n");
+		return ret;
+	}
+	memset(buf, 0, sizeof(buf));
+	strncpy(buf, in, strlen(in));
+
+	if(url == 0){ //b64url to b64
+		B64_DEBUG("Base64 to base64URL\n");
+		replace_char(buf, '-', '+');
+		replace_char(buf, '_', '/');
+
+		if((strlen(buf)%4) != 0){
+			int a = 4-(strlen(buf)%4);
+			while(a > 0){
+				B64_DEBUG("Length % 4 != 0, strcat \"=\"\n");
+				strcat(buf, "=");
+				a--;
+			}
+		}
+	}else{ //b64 to b64url
+		B64_DEBUG("Base64URL to base64\n");
+		char *ptr;
+
+		replace_char(buf, '+', '-');
+		replace_char(buf, '/', '_');
+
+		if((ptr = strchr(buf, '=')) != NULL){
+			B64_DEBUG("Find \"=\" remove it\n");
+			memset(ptr, 0, buf+strlen(buf)-ptr);
+		}
+	}
+	strncpy(out, buf, strlen(buf));
 
 	free(buf);
+	B64_DEBUG("--- b64_turn finish ---\n");
+	return strlen(buf);
 }
 
 size_t b64_encoded_size(size_t inlen)
 {
 	size_t ret;
 
+	B64_DEBUG("Input length = %d\n", inlen);
 	ret = inlen;
 	if (inlen % 3 != 0)
 		ret += 3 - (inlen % 3);
 	ret /= 3;
 	ret *= 4;
 
+	B64_DEBUG("Data length after encode = %d\n", ret);
 	return ret;
 }
 
@@ -49,18 +81,20 @@ size_t b64_encode(const unsigned char *in, size_t len, char *out)
 {
     B64_DEBUG("---B64 encode---\n");
 	size_t ret = 0;
-	size_t  elen;
 	size_t  v;
 	char *buf;
-	size_t buf_len;
+	size_t  buf_len;
 
 	//Calculate the length after encode
-	elen = b64_encoded_size(len);
+	buf_len = b64_encoded_size(len);
 
-	if((buf = malloc(elen+1)) == NULL){
+	size_t buf_size = buf_len+1;
+	if((buf = malloc(buf_size)) == NULL){
 		B64_DEBUG("Malloc failed\n");
 		return ret;
 	}
+	memset(buf, 0, buf_size);
+	B64_DEBUG("Malloc %d bytes buffer\n", buf_size);
 
 	//Encode
 	for (int  i=0, j=0; i<len; i+=3, j+=4) {
@@ -81,59 +115,13 @@ size_t b64_encode(const unsigned char *in, size_t len, char *out)
 			buf[j+3] = '=';
 		}
 	}
-	buf[elen] = '\0';
-	strcpy(out, buf);
+	buf[buf_len] = '\0';
+	strncpy(out, buf, buf_len);
 	B64_DEBUG("B64 encode data buffer (length = %ld):\n%s\n", strlen(buf), buf);
 
 	free(buf);
-	ret = elen;
+	ret = buf_len;
 	B64_DEBUG("---B64 encode finish---\n");
-	return ret;
-}
-
-size_t b64url_encode(const unsigned char *in, size_t len, char *out)
-{
-	size_t ret = 0;
-	char *ptr;
-	size_t b64_len;
-	// char *buf;
-	// size_t buf_len;
-
-	//Base64 encode
-	b64_len = b64_encoded_size(len);
-	char b64[b64_len+1];
-
-	if((b64_len = b64_encode(in, len, b64)) == 0){
-		B64_DEBUG("b64_encode failed\n");
-		return ret;
-	}
-	B64_DEBUG("b64url encode step1: %s\n", b64);
-
-	//Delete "="
-	if((ptr = strchr(b64, '=')) != NULL){
-	    B64_DEBUG("find \"=\"\n");
-		b64_len = ptr-b64;
-		b64[b64_len] = '\0';
-		// buf_len = ptr-b64;
-		// buf = malloc(buf_len+1);
-		// if(buf == NULL){
-		// 	B64_DEBUG("Malloc failed\n");
-		// 	return ret;
-		// }
-		// memset(buf, 0, buf_len+1);
-
-		// strncpy(buf, b64, buf_len);
-		// buf[buf_len] = '\0';
-	}
-	B64_DEBUG("b64url encode step2: %s\n", b64);
-
-	//Turn to base64url fomat
-	replace_char(b64, '+', "-");
-	replace_char(b64, '/', "_");
-
-	strcpy(out, b64);
-	//free(buf);
-	ret = b64_len;
 	return ret;
 }
 
@@ -141,22 +129,22 @@ size_t b64_decoded_size(const char *in)
 {
 	size_t len;
 	size_t ret;
-	size_t i;
 
-	if (in == NULL)
-		return 0;
-
+	B64_DEBUG("Input (length = %ld) : \n%s\n", strlen(in), in);
 	len = strlen(in);
+
 	ret = len / 4 * 3;
 
-	for (i=len; i-->0; ) {
+	for (int i=len-1; i >= 0; i--) {
 		if (in[i] == '=') {
+			B64_DEBUG("input[%d] = %d (=), length -1\n", i, in[i]);
 			ret--;
 		} else {
 			break;
 		}
 	}
 
+	B64_DEBUG("Data length after decode = %d\n", ret);
 	return ret;
 }
 
@@ -181,20 +169,6 @@ static int b64_checkchar(char c)
 		return 1;
 	if (c == '+' || c == '/' || c == '=')
 		return 1;
-	return 0;
-}
-
-static int b64url_checkchar(char c)
-{
-	if (c >= '0' && c <= '9')
-		return 1;
-	if (c >= 'A' && c <= 'Z')
-		return 1;
-	if (c >= 'a' && c <= 'z')
-		return 1;
-	if (c == '-' || c == '_')
-		return 1;
-	B64_DEBUG("Read %s -> failed\n", c);
 	return 0;
 }
 
@@ -244,51 +218,8 @@ size_t b64_decode(const char *in, unsigned char *out)
 
 	buf[buf_len] = '\0';
 	B64_DEBUG("Buffer after decode : \n%s\n", buf);
-	memcpy(out, buf, buf_len+1);
+	memcpy(out, buf, buf_len);
 	free(buf);
 	ret = buf_len;
-	return ret;
-}
-
-size_t b64url_decode(const char *in, unsigned char *out)
-{
-	B64_DEBUG("---B64URL DECODE---\n");
-	size_t ret = 0;
-	size_t len;
-	char *buf;
-	size_t buf_len;
-	size_t out_len;
-
-	len = strlen(in);
-
-	//Check input is base64url fomat
-	for(int a = 0; a < len; a++){
-		if(b64url_checkchar(in[a]) <= 0){
-			B64_DEBUG("b64url_checkchar() failed\n");
-			return ret;
-		}
-	}
-
-	//Copy input
-	buf = malloc(len+1);
-	memset(buf, 0, len+1);
-	strcpy(buf, in);
-
-	//Turn to base64 fomat
-	replace_char(buf, '_', "/");
-	replace_char(buf, '-', "+");
-
-	buf_len = strlen(buf);
-	if((buf_len % 4) == 2) strcat(buf, "==");
-	else if((buf_len %4) == 3) strcat(buf, "=");
-
-	//Base64 decode
-	if((ret = b64_decode(buf, out)) == 0){
-		B64_DEBUG("b64_decode failed\n");
-		return ret;
-	}
-	
-	free(buf);
-	B64_DEBUG("---B64URL DECODE END---\n");
 	return ret;
 }
