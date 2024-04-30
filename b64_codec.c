@@ -24,24 +24,12 @@ size_t b64_turn(const int url, const char *in, char *out){
 		B64_DEBUG("Malloc failed\n");
 		return ret;
 	}
-	memset(buf, 0, sizeof(buf));
+	B64_DEBUG("Malloc %ld bytes\n", buf_size);
+	memset(buf, 0, buf_size);
 	strncpy(buf, in, strlen(in));
 
-	if(url == 0){ //b64url to b64
+	if(url == 1){ //to base64URL
 		B64_DEBUG("Base64 to base64URL\n");
-		replace_char(buf, '-', '+');
-		replace_char(buf, '_', '/');
-
-		if((strlen(buf)%4) != 0){
-			int a = 4-(strlen(buf)%4);
-			while(a > 0){
-				B64_DEBUG("Length % 4 != 0, strcat \"=\"\n");
-				strcat(buf, "=");
-				a--;
-			}
-		}
-	}else{ //b64 to b64url
-		B64_DEBUG("Base64URL to base64\n");
 		char *ptr;
 
 		replace_char(buf, '+', '-');
@@ -50,6 +38,22 @@ size_t b64_turn(const int url, const char *in, char *out){
 		if((ptr = strchr(buf, '=')) != NULL){
 			B64_DEBUG("Find \"=\" remove it\n");
 			memset(ptr, 0, buf+strlen(buf)-ptr);
+		}
+	}else{ //to base64
+		B64_DEBUG("Base64URL to base64\n");
+
+		replace_char(buf, '-', '+');
+		replace_char(buf, '_', '/');
+
+		B64_DEBUG("Input length = %ld\n", strlen(buf));
+		if((strlen(buf)%4) != 0){
+			int a = 4-(strlen(buf)%4);
+			while(a > 0){
+				B64_DEBUG("Length % 4 != 0, strcat \"=\"\n");
+				strcat(buf, "=");
+				a--;
+			}
+			B64_DEBUG("Input length = %ld\n", strlen(buf));
 		}
 	}
 	strncpy(out, buf, strlen(buf));
