@@ -9,6 +9,13 @@
 #define B64_DEBUG(args...)
 #endif
 
+/**
+ * "Base64 to base64URL" or "base64URL to base64"
+ * @param url <in> 1 (to base64URL) or 0 (to base64)
+ * @param in <in> input string
+ * @param out <out> output string
+ * @returns 0 (error) or output length
+*/
 size_t b64_turn(const int url, const char *in, char *out);
 
 /**
