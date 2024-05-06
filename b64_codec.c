@@ -17,7 +17,6 @@ size_t b64_turn(const int url, const char *in, char *out){
 	B64_DEBUG("--- b64_turn ---\n");
 	size_t ret = 0;
 	char *buf;
-	size_t buf_len;
 	size_t buf_size = strlen(in)+1;
 
 	if((buf = malloc(buf_size)) == NULL){
