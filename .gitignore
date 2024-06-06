@@ -1,3 +1,6 @@
 *o
 *.o.d
-domo
+*.a
+*.so
+
+demo
