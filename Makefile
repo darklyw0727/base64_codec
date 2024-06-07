@@ -4,8 +4,7 @@ endif
 
 include $(ROOT_PATH)/build/build-include.mk
 
-SOURCE = b64_codec.c
-OBJECT = $(SOURCE:.c=.o)
+OBJS = b64_codec.o
 
 SHARE_LIB = libb64codec.so
 STATIC_LIB = libb64codec.a
